@@ -1,0 +1,9 @@
+[package]
+name = "programming-bitcoin-in-rust"
+version = "0.1.0"
+edition = "2021"
+description = "Programming Bitcoin (implemented in Rust)"
+publish = false
+
+[dependencies]
+ruint = "1.11.0"
