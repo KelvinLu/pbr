@@ -3,9 +3,9 @@
 use std::ops;
 
 use crate::math::elliptic_curve::point::EllipticCurvePoint;
+use crate::math::elliptic_curve::rhs::DerivationError;
 use crate::math::finite_field_element::FiniteFieldElement;
 use crate::crypto::ecdsa::signature::Signature;
-use crate::crypto::ecdsa::elliptic_curve_point_recovery::DerivationError;
 use crate::math::algorithm::tonelli_shanks;
 use crate::util::number::U256;
 use crate::util::number::uint;
@@ -214,6 +214,7 @@ impl Signature {
 
 /// secp256k1 is an elliptic curve whose underlying group has a cofactor of `h = 1`. There are up
 /// to `2 * (h + 1) = 4` valid points for a given signature.
+#[derive(Debug)]
 pub enum DerivedSecp256k1Points {
     Pair([Secp256k1Point; 2]),
     Quartet([Secp256k1Point; 4]),
