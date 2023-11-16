@@ -1,8 +1,16 @@
 //! Cryptographic digests and hash functions.
 
+pub use sha1::{Digest as Sha1Digest, Sha1};
 pub use sha2::{Digest as Sha2Digest, Sha256};
 pub use ripemd::{Digest as RipemdDigest, Ripemd160};
 pub use hmac::{Hmac, Mac};
+
+/// SHA-1 digest for `data` bytes.
+///
+/// Returns a 20 byte value.
+pub fn sha_1(data: impl AsRef<[u8]>) -> [u8; 20] {
+    Sha1::digest(data).into()
+}
 
 /// SHA-256 digest for `data` bytes.
 ///

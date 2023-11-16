@@ -1,46 +1,36 @@
-//! Bitcoin script bytes.
+//! Segregated witness bytes.
 
 use crate::util::byte_string::ByteString;
 use crate::util::byte_string::ByteSlice;
 use crate::util::hexadecimal::hexadecimal_encode;
 
-/// Bitcoin script bytes.
 #[derive(Clone)]
-#[derive(PartialEq)]
-pub struct ScriptBytes {
+pub struct SegWitItem {
     bytes: Vec<u8>
 }
 
-impl ByteString for ScriptBytes {
+impl ByteString for SegWitItem {
+    /// Create a segregated witness item consisting of some bytes.
     fn of(bytes: &[u8]) -> Self {
         Self { bytes: Vec::from(bytes) }
     }
 }
 
-impl ByteSlice for ScriptBytes {
+impl ByteSlice for SegWitItem {
+    /// Return the sequence of bytes representing this segregated witness item.
     fn bytes(&self) -> &[u8] {
         &self.bytes
     }
 }
 
-impl ScriptBytes {
-    /// Create a concatenation of two scripts' byte sequences.
-    pub fn concatenate(&self, rhs: &ScriptBytes) -> Self {
-        let mut bytes = self.bytes.clone();
-        bytes.extend_from_slice(rhs.bytes());
-
-        Self::of(&bytes)
-    }
-}
-
-impl std::fmt::Display for ScriptBytes {
+impl std::fmt::Display for SegWitItem {
     /// Displays the script bytes.
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "<script bytes {:?}>", self)
+        write!(f, "<segwit item {:?}>", self)
     }
 }
 
-impl std::fmt::Debug for ScriptBytes {
+impl std::fmt::Debug for SegWitItem {
     /// Displays the script bytes.
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut buffer = vec![0_u8; self.bytes.len() * 2];

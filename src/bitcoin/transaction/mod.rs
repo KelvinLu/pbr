@@ -8,8 +8,11 @@ mod input;
 mod utxo;
 
 pub mod fee;
+pub mod verify;
+pub mod signing;
 
 pub use transaction::Transaction;
+pub use transaction::TransactionParsingError;
 pub use txid::TransactionId;
 pub use version::Version;
 pub use locktime::Locktime;

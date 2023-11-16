@@ -5,6 +5,7 @@ use crate::serialization::bitcoin_base58check::BitcoinEncodingPrefix;
 use crate::serialization::point::CompressedPointSecFormatBytes;
 use crate::serialization::point::UncompressedPointSecFormatBytes;
 use crate::bitcoin::network::BitcoinNetworkType;
+use crate::bitcoin::script::ScriptBytes;
 use crate::bitcoin::script_types::BitcoinTransactionType;
 use crate::crypto::digest::hash_160;
 use crate::util::byte_string::ByteSlice;
@@ -115,6 +116,21 @@ impl BitcoinAddress {
 
         bytes[0..=0].clone_from_slice(prefix_bytes);
         bytes[1..=20].clone_from_slice(&hash_160(point_bytes.bytes()));
+
+        Self {
+            bytes: bytes
+        }
+    }
+
+    /// Creates a P2SH Bitcoin address for a given redeem script.
+    ///
+    /// This is encoded using a digest of the script bytes.
+    pub fn for_redeem_script(network: BitcoinNetworkType, redeem_script_bytes: ScriptBytes) -> Self {
+        let mut bytes: [u8; 21] = [0_u8; 21];
+        let prefix_bytes: &[u8] = BitcoinEncodingPrefix::bytes(Self::base58_encoding_type(network, BitcoinTransactionType::P2sh));
+
+        bytes[0..=0].clone_from_slice(prefix_bytes);
+        bytes[1..=20].clone_from_slice(&hash_160(redeem_script_bytes.bytes()));
 
         Self {
             bytes: bytes
