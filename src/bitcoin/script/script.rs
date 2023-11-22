@@ -261,4 +261,7 @@ pub enum ScriptError {
     /// An `OP_IF`, `OP_NOTIF`, `OP_ELSE`, or `OP_ENDIF` is mismatched; all conditional blocks must
     /// begin and end.
     ConditionalBlockMismatched,
+
+    /// Invalid redeem script.
+    InvalidRedeemScript,
 }

@@ -4,6 +4,7 @@ use crate::bitcoin::script::Script;
 use crate::bitcoin::script::ScriptExecutionContext;
 use crate::bitcoin::script::ScriptError;
 use crate::bitcoin::script::DataElement;
+use crate::bitcoin::script::Opcode;
 use crate::bitcoin::script::TransactionInputCommitment;
 use crate::bitcoin::script::signature_verification;
 use crate::bitcoin::script::stack::GetDataElement;
@@ -15,6 +16,8 @@ use crate::crypto::digest::sha_256;
 use crate::crypto::digest::hash_160;
 use crate::util::byte_string::ByteString;
 use crate::util::byte_string::ByteSlice;
+
+const OP_CHECKMULTISIG_ERROR: ScriptError = ScriptError::OpcodeFailed(Opcode::Cryptographic(CryptographicOpcode::OpCheckMultisig));
 
 pub fn opcode_cryptographic(
     stack: &mut Vec<DataElement>,
@@ -71,7 +74,59 @@ pub fn opcode_cryptographic(
                     opcode_cryptographic(stack, script, instruction_pointer, context, CryptographicOpcode::OpCheckSig)?;
                     opcode_flowcontrol(stack, script, instruction_pointer, context, FlowControlOpcode::OpVerify)?;
                 },
-                CryptographicOpcode::OpCheckMultisig => todo!(),
+                CryptographicOpcode::OpCheckMultisig => {
+                    let mut public_keys: Vec<DataElement> = vec![];
+                    let mut signatures: Vec<DataElement> = vec![];
+                    let commitment = TransactionInputCommitment::ScriptCode(script, instruction_pointer);
+
+                    let public_key_count = stack.get_data_element()?.number()?;
+
+                    if public_key_count < 1 {
+                        return Err(OP_CHECKMULTISIG_ERROR);
+                    }
+
+                    for _ in 0..public_key_count { public_keys.push(stack.get_data_element()?) }
+
+                    let signature_count = stack.get_data_element()?.number()?;
+
+                    if (signature_count < 1) || (signature_count > public_key_count) {
+                        return Err(OP_CHECKMULTISIG_ERROR);
+                    }
+
+                    for _ in 0..signature_count { signatures.push(stack.get_data_element()?) }
+
+                    // Consume the "OP_0" data element.
+                    if !stack.get_data_element()?.bytes().is_empty() {
+                        return Err(OP_CHECKMULTISIG_ERROR);
+                    }
+
+                    let mut n = 0; // Public key index
+
+                    for signature in signatures {
+                        loop {
+                            let Some(public_key) = public_keys.get(n) else {
+                                stack.push(DataElement::of(&[0_u8]));
+
+                                return Ok(());
+                            };
+
+                            n += 1;
+
+                            if signature_verification(
+                                &signature,
+                                &public_key,
+                                &context.transaction,
+                                context.input_index,
+                                &commitment,
+                                context.checksig_digest,
+                            ).map_err(|_| OP_CHECKMULTISIG_ERROR)? {
+                                break;
+                            }
+                        }
+                    }
+
+                    stack.push(DataElement::of(&[1_u8]));
+                },
                 CryptographicOpcode::OpCheckMultisigVerify => todo!(),
                 _ => panic!("unexpected opcode")
             };

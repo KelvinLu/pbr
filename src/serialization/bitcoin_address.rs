@@ -35,7 +35,7 @@ const TESTNET_P2PKH: u8 = BitcoinEncodingPrefix::TestnetP2pkhAddress.bytes()[0];
 const TESTNET_P2SH: u8 = BitcoinEncodingPrefix::TestnetP2shAddress.bytes()[0];
 
 impl BitcoinAddress {
-    fn base58_encoding_type(network: BitcoinNetworkType, address_type: BitcoinTransactionType) -> BitcoinEncodingPrefix {
+    pub fn base58_encoding_type(network: BitcoinNetworkType, address_type: BitcoinTransactionType) -> BitcoinEncodingPrefix {
         match (network, address_type) {
             (BitcoinNetworkType::Mainnet, BitcoinTransactionType::P2pkh) => BitcoinEncodingPrefix::MainnetP2pkhAddress,
             (BitcoinNetworkType::Mainnet, BitcoinTransactionType::P2sh) => BitcoinEncodingPrefix::MainnetP2shAddress,
@@ -84,6 +84,19 @@ impl BitcoinAddress {
         let data = Base58CheckBitcoinEncoding::decode(21, address).unwrap();
 
         bytes.clone_from_slice(&data);
+
+        Self {
+            bytes: bytes
+        }
+    }
+
+    /// Creates a Bitcoin address for some 20 byte digest.
+    pub fn for_hash_bytes(prefix: BitcoinEncodingPrefix, hash_bytes: &[u8]) -> Self {
+        let mut bytes: [u8; 21] = [0_u8; 21];
+        let prefix_bytes: &[u8] = BitcoinEncodingPrefix::bytes(prefix);
+
+        bytes[0..=0].clone_from_slice(prefix_bytes);
+        bytes[1..=20].clone_from_slice(&hash_bytes);
 
         Self {
             bytes: bytes

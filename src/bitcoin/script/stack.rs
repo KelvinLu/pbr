@@ -154,6 +154,11 @@ impl <'a> Stack<'a> {
     pub fn stack(&self) -> &Vec<DataElement> {
         &self.stack
     }
+
+    /// Drop the data element at the top of the stack, if any.
+    pub fn drop(&mut self) -> Option<DataElement> {
+        self.stack.pop()
+    }
 }
 
 impl Iterator for Stack<'_> {

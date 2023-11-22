@@ -4,9 +4,12 @@ use crate::bitcoin::transaction::Transaction;
 use crate::bitcoin::transaction::TransactionId;
 use crate::bitcoin::transaction::fee::transaction_fee::FeeCalculationError;
 use crate::bitcoin::script::Script;
+use crate::bitcoin::script::ScriptBytes;
+use crate::bitcoin::script::ScriptExecutionContext;
 use crate::bitcoin::script::ScriptError;
 use crate::bitcoin::script::Stack;
-use crate::bitcoin::script::ScriptExecutionContext;
+use crate::util::byte_string::ByteString;
+use crate::util::byte_string::ByteSlice;
 
 #[derive(Debug)]
 pub enum TransactionVerificationError {
@@ -80,8 +83,13 @@ impl Transaction {
         let input_script = Script::try_from(input_script_bytes).map_err(|_| TransactionVerificationError::TransactionScriptError(n))?;
         let utxo_script = Script::try_from(utxo_script_bytes).map_err(|_| TransactionVerificationError::TransactionScriptError(n))?;
 
-        self.evaluate_script(n, input_script, utxo_script, timestamp, block_height)
-            .map_err(|_| TransactionVerificationError::TransactionScriptError(n))
+        if utxo_script_bytes.is_p2sh_locking() {
+            self.evaluate_redeem_script(n, input_script, utxo_script, timestamp, block_height)
+                .map_err(|_| TransactionVerificationError::TransactionScriptError(n))
+        } else {
+            self.evaluate_script(n, input_script, utxo_script, timestamp, block_height)
+                .map_err(|_| TransactionVerificationError::TransactionScriptError(n))
+        }
     }
 
     /// Evaluate transaction input (unlocking) and UTXO (locking) scripts.
@@ -96,5 +104,32 @@ impl Transaction {
         let context = ScriptExecutionContext::new(&self, input_index, timestamp, block_height);
 
         Ok(Stack::new(&input_script, &context).adjoin(&utxo_script)?.evaluate()?)
+    }
+
+    /// Evaluate transaction input (unlocking) and UTXO (locking) scripts.
+    fn evaluate_redeem_script<'a>(
+        &'a self,
+        input_index: usize,
+        input_script: Script,
+        utxo_script: Script,
+        timestamp: u64,
+        block_height: u64,
+    ) -> Result<bool, ScriptError> {
+        let context = ScriptExecutionContext::new(&self, input_index, timestamp, block_height);
+        let mut stack = Stack::new(&input_script, &context);
+
+        stack.evaluate()?;
+
+        let Some(redeem_script_element) = stack.peek() else { return Err(ScriptError::InvalidRedeemScript) };
+        let redeem_script = Script::try_from(&ScriptBytes::of(&redeem_script_element.bytes()))
+            .map_err(|_| ScriptError::InvalidRedeemScript)?;
+
+        if stack.adjoin(&utxo_script)?.evaluate()? {
+            stack.drop();
+
+            Ok(stack.adjoin(&redeem_script)?.evaluate()?)
+        } else {
+            Ok(false)
+        }
     }
 }
